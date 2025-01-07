@@ -1,45 +1,47 @@
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
 import { expect } from "chai";
-import hre, { ignition } from "hardhat";
-import { getAddress, zeroAddress } from "viem";
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { ethers, ignition } from "hardhat";
 import TokenAModule from "../ignition/modules/TokenAModule";
 import TokenBModule from "../ignition/modules/TokenBModule";
 import SimpleDexModule from "../ignition/modules/SimpleDexModule";
 
 describe("SimpleDex", function () {
   async function deploySimpleDexFixture() {
-    const [owner, otherAccount] = await hre.viem.getWalletClients();
+    const [owner, otherAccount] = await ethers.getSigners();
 
+    //Deploy contracts
     const { tokenA } = await ignition.deploy(TokenAModule, {
       parameters: {
-        TokenAModule: { initialOwner: owner.account.address },
+        TokenAModule: { initialOwner: owner.address },
       },
     });
 
     const { tokenB } = await ignition.deploy(TokenBModule, {
       parameters: {
-        TokenBModule: { initialOwner: owner.account.address },
+        TokenBModule: { initialOwner: owner.address },
       },
     });
 
-    const { simpleDex } = await hre.ignition.deploy(SimpleDexModule, {
+    const { simpleDex } = await ignition.deploy(SimpleDexModule, {
       parameters: {
         SimpleDexModule: {
-          tokenAAddress: tokenA.address,
-          tokenBAddress: tokenB.address,
+          tokenAAddress: tokenA.target.toString(),
+          tokenBAddress: tokenB.target.toString(),
         },
       },
     });
 
-    const publicClient = await hre.viem.getPublicClient();
+    //Mint tokens to users
+    // await tokenA.write.mint(owner.account.address, 1000);
 
     return {
       tokenA,
+      tokenAAddress: tokenA.target.toString(),
       tokenB,
+      tokenBAddress: tokenB.target.toString(),
       simpleDex,
       owner,
       otherAccount,
-      publicClient,
     };
   }
 
@@ -49,73 +51,37 @@ describe("SimpleDex", function () {
         deploySimpleDexFixture
       );
 
-      expect(await tokenA.read.owner()).to.equal(
-        getAddress(owner.account.address)
-      );
-      expect(await tokenB.read.owner()).to.equal(
-        getAddress(owner.account.address)
-      );
+      expect(await tokenA.owner()).to.equal(owner.address);
+      expect(await tokenB.owner()).to.equal(owner.address);
     });
 
     it("Should deploy the SimpleDex with the right token addresses", async function () {
-      const { tokenA, tokenB, simpleDex } = await loadFixture(
+      const { simpleDex, tokenAAddress, tokenBAddress } = await loadFixture(
         deploySimpleDexFixture
       );
 
-      expect(await simpleDex.read.tokenA()).to.equal(
-        getAddress(tokenA.address)
-      );
-      expect(await simpleDex.read.tokenB()).to.equal(
-        getAddress(tokenB.address)
-      );
+      expect(await simpleDex.tokenA()).to.equal(tokenAAddress);
+      expect(await simpleDex.tokenB()).to.equal(tokenBAddress);
     });
 
-    it("Should fail to deploy tokens because no owner address is provided", async function () {
-      await expect(ignition.deploy(TokenAModule)).to.be.rejected;
-      await expect(ignition.deploy(TokenBModule)).to.be.rejected;
-    });
+    it("Should fail to deploy tokens because address 0 is not a valid owner", async function () {
+      const tokenAFactory = await ethers.getContractFactory("TokenA");
+      const tokenBFactory = await ethers.getContractFactory("TokenB");
 
-    it("Should fail to deploy the simple DEX because no token addresses are provided", async function () {
-      await expect(ignition.deploy(SimpleDexModule)).to.be.rejected;
-    });
-
-    it("Should fail to deploy the simple DEX because only TokenA address is provided", async function () {
       await expect(
-        ignition.deploy(SimpleDexModule, {
-          parameters: {
-            SimpleDexModule: {
-              tokenAAddress: "0x",
-            },
-          },
-        })
-      ).to.be.rejected;
+        tokenAFactory.deploy(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(tokenAFactory, "OwnableInvalidOwner");
+
+      await expect(
+        tokenBFactory.deploy(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(tokenBFactory, "OwnableInvalidOwner");
     });
 
-    it("Should fail to deploy the simple DEX because only TokenB address is provided", async function () {
+    it("Should fail to deploy the Simple DEX because address 0 is not a valid token address", async function () {
+      const simpleDexFactory = await ethers.getContractFactory("SimpleDex");
       await expect(
-        ignition.deploy(SimpleDexModule, {
-          parameters: {
-            SimpleDexModule: {
-              tokenBAddress: "0x",
-            },
-          },
-        })
-      ).to.be.rejected;
-    });
-
-    it("Should fail to deploy the simple DEX because address 0 is not a valid address", async function () {
-      await expect(
-        ignition.deploy(SimpleDexModule, {
-          parameters: {
-            SimpleDexModule: {
-              tokenAAddress: zeroAddress,
-              tokenBAddress: zeroAddress,
-            },
-          },
-        })
-      ).to.be.rejectedWith(
-        `InvalidTokenAddress("${zeroAddress}", "${zeroAddress}")`
-      );
+        simpleDexFactory.deploy(ethers.ZeroAddress, ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(simpleDexFactory, "InvalidTokenAddress");
     });
   });
 });

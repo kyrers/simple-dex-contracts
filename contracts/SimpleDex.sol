@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: GNU General Public License v3.0
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract SimpleDex {
+contract SimpleDex is ReentrancyGuard {
     IERC20 public tokenA;
     IERC20 public tokenB;
     uint256 public reserveA;
@@ -48,7 +49,7 @@ contract SimpleDex {
     function addLiquidity(
         uint256 amountA,
         uint256 amountB
-    ) external validTokenAmounts(amountA, amountB) {
+    ) external validTokenAmounts(amountA, amountB) nonReentrant {
         if (amountB != (amountA * reserveB) / reserveA) {
             revert InvalidTokenRatio(amountB / amountA, reserveB / reserveA);
         }

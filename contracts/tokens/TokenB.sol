@@ -9,4 +9,8 @@ contract TokenB is ERC20, ERC20Permit, Ownable {
     constructor(
         address initialOwner
     ) ERC20("TokenB", "TKB") ERC20Permit("TokenB") Ownable(initialOwner) {}
+
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
 }
