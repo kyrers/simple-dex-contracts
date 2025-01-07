@@ -1,7 +1,7 @@
 import hre from "hardhat";
-import TokenAModule from "../ignition/modules/TokenA";
-import TokenBModule from "../ignition/modules/TokenB";
-import SimpleDexModule from "../ignition/modules/SimpleDex";
+import TokenAModule from "../ignition/modules/TokenAModule";
+import TokenBModule from "../ignition/modules/TokenBModule";
+import SimpleDexModule from "../ignition/modules/SimpleDexModule";
 
 async function main() {
   const [owner] = await hre.viem.getWalletClients();
