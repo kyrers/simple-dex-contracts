@@ -5,7 +5,9 @@ import TokenAModule from "../ignition/modules/TokenAModule";
 import TokenBModule from "../ignition/modules/TokenBModule";
 import SimpleDexModule from "../ignition/modules/SimpleDexModule";
 
-describe("SimpleDex", function () {
+const TOKEN_AMOUNT = ethers.parseEther("1000");
+
+describe("## SIMPLE DEX ##", function () {
   async function deploySimpleDexFixture() {
     const [owner, otherAccount] = await ethers.getSigners();
 
@@ -32,7 +34,10 @@ describe("SimpleDex", function () {
     });
 
     //Mint tokens to users
-    // await tokenA.write.mint(owner.account.address, 1000);
+    await tokenA.mint(owner.address, TOKEN_AMOUNT);
+    await tokenA.mint(otherAccount.address, TOKEN_AMOUNT);
+    await tokenB.mint(owner.address, TOKEN_AMOUNT);
+    await tokenB.mint(otherAccount.address, TOKEN_AMOUNT);
 
     return {
       tokenA,
@@ -45,7 +50,7 @@ describe("SimpleDex", function () {
     };
   }
 
-  describe("Deployment", function () {
+  describe("# DEPLOYMENT #", function () {
     it("Should deploy TokenA and TokenB with the correct owner", async function () {
       const { tokenA, tokenB, owner } = await loadFixture(
         deploySimpleDexFixture
@@ -82,6 +87,37 @@ describe("SimpleDex", function () {
       await expect(
         simpleDexFactory.deploy(ethers.ZeroAddress, ethers.ZeroAddress)
       ).to.be.revertedWithCustomError(simpleDexFactory, "InvalidTokenAddress");
+    });
+  });
+
+  describe("# MINTING TOKENS #", function () {
+    it("Should mint 1000 of each token to the two accounts", async function () {
+      const { tokenA, tokenB, owner, otherAccount } = await loadFixture(
+        deploySimpleDexFixture
+      );
+
+      expect(await tokenA.balanceOf(owner.address)).to.equal(TOKEN_AMOUNT);
+      expect(await tokenA.balanceOf(otherAccount.address)).to.equal(
+        TOKEN_AMOUNT
+      );
+      expect(await tokenB.balanceOf(owner.address)).to.equal(TOKEN_AMOUNT);
+      expect(await tokenB.balanceOf(otherAccount.address)).to.equal(
+        TOKEN_AMOUNT
+      );
+    });
+
+    it("Should fail to mint tokens because it is not the owner doing it", async function () {
+      const { tokenA, tokenB, otherAccount } = await loadFixture(
+        deploySimpleDexFixture
+      );
+
+      await expect(
+        tokenA.connect(otherAccount).mint(otherAccount.address, 1000)
+      ).to.be.revertedWithCustomError(tokenA, "OwnableUnauthorizedAccount");
+
+      await expect(
+        tokenB.connect(otherAccount).mint(otherAccount.address, 1000)
+      ).to.be.revertedWithCustomError(tokenB, "OwnableUnauthorizedAccount");
     });
   });
 });

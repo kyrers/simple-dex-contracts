@@ -24,9 +24,6 @@ importers:
       '@nomicfoundation/hardhat-toolbox':
         specifier: ^5.0.0
         version: 5.0.0(f5jo7kztntihz7slfromye5wui)
-      chai:
-        specifier: '4'
-        version: 4.5.0
       ethers:
         specifier: ^6.13.5
         version: 6.13.5
