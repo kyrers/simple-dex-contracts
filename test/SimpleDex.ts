@@ -111,6 +111,7 @@ describe("## SIMPLE DEX ##", function () {
         deploySimpleDexFixture
       );
 
+      //These type errors are known, see https://github.com/NomicFoundation/hardhat/issues/5112 and https://github.com/NomicFoundation/hardhat/issues/6126
       await expect(
         tokenA.connect(otherAccount).mint(otherAccount.address, 1000)
       ).to.be.revertedWithCustomError(tokenA, "OwnableUnauthorizedAccount");
