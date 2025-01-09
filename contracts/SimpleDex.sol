@@ -50,10 +50,6 @@ contract SimpleDex is ReentrancyGuard {
         uint256 amountA,
         uint256 amountB
     ) external validTokenAmounts(amountA, amountB) nonReentrant {
-        if (amountB != (amountA * reserveB) / reserveA) {
-            revert InvalidTokenRatio(amountB / amountA, reserveB / reserveA);
-        }
-
         uint256 lpTokensMinted;
 
         if (totalLpTokens == 0) {
@@ -62,7 +58,6 @@ contract SimpleDex is ReentrancyGuard {
         } else {
             // Enforce ratio
             uint256 expectedAmountB = (amountA * reserveB) / reserveA;
-            //if (amountB < expectedAmountB || amountB > expectedAmountB + 1) {
             if (amountB != expectedAmountB) {
                 revert InvalidTokenRatio(amountB, expectedAmountB);
             }
