@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { ethers } from "hardhat";
-import { FixedNumber } from "ethers";
 
 const TOKEN_AMOUNT = ethers.parseEther("1000");
 const INITIAL_LIQUIDITY_A = ethers.parseEther("100");
