@@ -26,6 +26,8 @@ contract SimpleDex is ReentrancyGuard {
         uint256 amountB
     );
 
+    error InsufficientLiquidity();
+    error InsufficientLpTokens();
     error InvalidTokenAddress(address tokenA, address tokenB);
     error InvalidTokenAmount(uint256 amountA, uint256 amountB);
     error InvalidTokenRatio(uint256 amountB, uint256 expectedAmountB);
@@ -56,12 +58,7 @@ contract SimpleDex is ReentrancyGuard {
             // Initial liquidity
             lpTokensMinted = sqrt(amountA * amountB);
         } else {
-            // Enforce ratio
-            uint256 expectedAmountB = (amountA * reserveB) / reserveA;
-            if (amountB != expectedAmountB) {
-                revert InvalidTokenRatio(amountB, expectedAmountB);
-            }
-
+            validateRatio(amountA, amountB);
             lpTokensMinted = (amountA * totalLpTokens) / reserveA;
         }
 
@@ -76,7 +73,39 @@ contract SimpleDex is ReentrancyGuard {
         emit AddLiquidity(msg.sender, amountA, amountB);
     }
 
-    function sqrt(uint256 x) internal pure returns (uint256 y) {
+    function removeLiquidity(
+        uint256 amountA,
+        uint256 amountB
+    ) external validTokenAmounts(amountA, amountB) nonReentrant {
+        if (amountA > reserveA || amountB > reserveB) {
+            revert InsufficientLiquidity();
+        }
+        validateRatio(amountA, amountB);
+
+        uint256 lpTokensToBurn = (amountA * totalLpTokens) / reserveA;
+        if (lpBalances[msg.sender] < lpTokensToBurn) {
+            revert InsufficientLpTokens();
+        }
+
+        reserveA -= amountA;
+        reserveB -= amountB;
+        totalLpTokens -= lpTokensToBurn;
+        lpBalances[msg.sender] -= lpTokensToBurn;
+
+        tokenA.transfer(msg.sender, amountA);
+        tokenB.transfer(msg.sender, amountB);
+
+        emit RemoveLiquidity(msg.sender, amountA, amountB);
+    }
+
+    function validateRatio(uint256 amountA, uint256 amountB) private view {
+        uint256 expectedAmountB = (amountA * reserveB) / reserveA;
+        if (amountB != expectedAmountB) {
+            revert InvalidTokenRatio(amountB, expectedAmountB);
+        }
+    }
+
+    function sqrt(uint256 x) private pure returns (uint256 y) {
         uint256 z = (x + 1) / 2;
         y = x;
         while (z < y) {
@@ -84,22 +113,6 @@ contract SimpleDex is ReentrancyGuard {
             z = (x / z + z) / 2;
         }
     }
-
-    // function removeLiquidity(uint256 amountA, uint256 amountB) external {
-    //     require(amountA > 0 && amountB > 0, "Invalid amounts");
-    //     require(
-    //         amountA <= reserveA && amountB <= reserveB,
-    //         "Insufficient liquidity"
-    //     );
-
-    //     reserveA -= amountA;
-    //     reserveB -= amountB;
-
-    //     tokenA.transfer(msg.sender, amountA);
-    //     tokenB.transfer(msg.sender, amountB);
-
-    //     emit RemoveLiquidity(msg.sender, amountA, amountB);
-    // }
 
     // function swap(address tokenIn, uint256 amountIn) external {
     //     require(amountIn > 0, "Invalid amount");
