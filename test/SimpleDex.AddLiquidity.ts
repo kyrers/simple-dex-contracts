@@ -3,7 +3,11 @@ import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { deploySimpleDexFixture } from "./utils/fixtures";
 import { INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B } from "./utils/constants";
-import { sqrt } from "./utils/math";
+import {
+  addInitialLiquidity,
+  sqrt,
+  verifyAddLiquidityState,
+} from "./utils/helpers";
 
 describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
   it("Should add initial liquidity correctly", async function () {
@@ -11,57 +15,67 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
       deploySimpleDexFixture
     );
 
-    await tokenA.approve(simpleDex.target, INITIAL_LIQUIDITY_A);
-    await tokenB.approve(simpleDex.target, INITIAL_LIQUIDITY_B);
+    const tx = await addInitialLiquidity(
+      simpleDex,
+      tokenA,
+      tokenB,
+      INITIAL_LIQUIDITY_A,
+      INITIAL_LIQUIDITY_B
+    );
 
-    await expect(
-      simpleDex.addLiquidity(INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B)
-    )
+    await expect(tx)
       .to.emit(simpleDex, "AddLiquidity")
       .withArgs(owner.address, INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B);
 
     const expectedLpTokens = sqrt(INITIAL_LIQUIDITY_A * INITIAL_LIQUIDITY_B);
-    expect(await simpleDex.reserveA()).to.equal(INITIAL_LIQUIDITY_A);
-    expect(await simpleDex.reserveB()).to.equal(INITIAL_LIQUIDITY_B);
-    expect(await simpleDex.totalLpTokens()).to.equal(expectedLpTokens);
-    expect(await simpleDex.lpBalances(owner.address)).to.equal(
-      expectedLpTokens
-    );
+
+    await verifyAddLiquidityState(simpleDex, owner.address, {
+      expectedLpBalance: expectedLpTokens,
+      expectedReserveA: INITIAL_LIQUIDITY_A,
+      expectedReserveB: INITIAL_LIQUIDITY_B,
+      expectedTotalLp: expectedLpTokens,
+    });
   });
 
   it("Should add subsequent liquidity respecting the ratio", async function () {
-    const { simpleDex, tokenA, tokenB, otherAccount } = await loadFixture(
-      deploySimpleDexFixture
+    const { simpleDex, tokenA, tokenB, owner, otherAccount } =
+      await loadFixture(deploySimpleDexFixture);
+
+    //Add initial liquidity with owner
+    await addInitialLiquidity(
+      simpleDex,
+      tokenA,
+      tokenB,
+      INITIAL_LIQUIDITY_A,
+      INITIAL_LIQUIDITY_B
     );
 
-    await tokenA.approve(simpleDex.target, INITIAL_LIQUIDITY_A);
-    await tokenB.approve(simpleDex.target, INITIAL_LIQUIDITY_B);
-    await simpleDex.addLiquidity(INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B);
-
+    const firstTxLpTokens = sqrt(INITIAL_LIQUIDITY_A * INITIAL_LIQUIDITY_B);
     const additionalAmountA = ethers.parseEther("50");
     const additionalAmountB = ethers.parseEther("100");
 
-    await tokenA
-      .connect(otherAccount)
-      .approve(simpleDex.target, additionalAmountA);
-    await tokenB
-      .connect(otherAccount)
-      .approve(simpleDex.target, additionalAmountB);
+    //Add subsequent liquidity with otherAccount
+    const tx = await addInitialLiquidity(
+      simpleDex.connect(otherAccount),
+      tokenA.connect(otherAccount),
+      tokenB.connect(otherAccount),
+      additionalAmountA,
+      additionalAmountB
+    );
 
-    await expect(
-      simpleDex
-        .connect(otherAccount)
-        .addLiquidity(additionalAmountA, additionalAmountB)
-    )
+    const secondTxLpTokens =
+      (additionalAmountA * firstTxLpTokens) / INITIAL_LIQUIDITY_A;
+
+    await expect(tx)
       .to.emit(simpleDex, "AddLiquidity")
       .withArgs(otherAccount.address, additionalAmountA, additionalAmountB);
 
-    expect(await simpleDex.reserveA()).to.equal(
-      INITIAL_LIQUIDITY_A + additionalAmountA
-    );
-    expect(await simpleDex.reserveB()).to.equal(
-      INITIAL_LIQUIDITY_B + additionalAmountB
-    );
+    await verifyAddLiquidityState(simpleDex, otherAccount.address, {
+      expectedReserveA: INITIAL_LIQUIDITY_A + additionalAmountA,
+      expectedReserveB: INITIAL_LIQUIDITY_B + additionalAmountB,
+      expectedTotalLp: firstTxLpTokens + secondTxLpTokens,
+      expectedLpBalance: secondTxLpTokens,
+    });
   });
 
   it("Should handle very small liquidity amounts correctly", async function () {
@@ -72,18 +86,26 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
     const smallAmountA = ethers.parseEther("0.0001");
     const smallAmountB = ethers.parseEther("0.0002");
 
-    await tokenA.approve(simpleDex.target, smallAmountA);
-    await tokenB.approve(simpleDex.target, smallAmountB);
+    const tx = await addInitialLiquidity(
+      simpleDex,
+      tokenA,
+      tokenB,
+      smallAmountA,
+      smallAmountB
+    );
 
-    await expect(simpleDex.addLiquidity(smallAmountA, smallAmountB))
+    await expect(tx)
       .to.emit(simpleDex, "AddLiquidity")
       .withArgs(owner.address, smallAmountA, smallAmountB);
 
     const expectedLpTokens = sqrt(smallAmountA * smallAmountB);
-    expect(await simpleDex.totalLpTokens()).to.equal(expectedLpTokens);
-    expect(await simpleDex.lpBalances(owner.address)).to.equal(
-      expectedLpTokens
-    );
+
+    await verifyAddLiquidityState(simpleDex, owner.address, {
+      expectedReserveA: smallAmountA,
+      expectedReserveB: smallAmountB,
+      expectedTotalLp: expectedLpTokens,
+      expectedLpBalance: expectedLpTokens,
+    });
   });
 
   it("Should handle very large liquidity amounts correctly", async function () {
@@ -93,22 +115,29 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
 
     const largeAmountA = ethers.parseEther("1000000");
     const largeAmountB = ethers.parseEther("2000000");
-
     tokenA.mint(owner.address, largeAmountA);
     tokenB.mint(owner.address, largeAmountB);
 
-    await tokenA.approve(simpleDex.target, largeAmountA);
-    await tokenB.approve(simpleDex.target, largeAmountB);
+    const tx = await addInitialLiquidity(
+      simpleDex,
+      tokenA,
+      tokenB,
+      largeAmountA,
+      largeAmountB
+    );
 
-    await expect(simpleDex.addLiquidity(largeAmountA, largeAmountB))
+    await expect(tx)
       .to.emit(simpleDex, "AddLiquidity")
       .withArgs(owner.address, largeAmountA, largeAmountB);
 
     const expectedLpTokens = sqrt(largeAmountA * largeAmountB);
-    expect(await simpleDex.totalLpTokens()).to.equal(expectedLpTokens);
-    expect(await simpleDex.lpBalances(owner.address)).to.equal(
-      expectedLpTokens
-    );
+
+    await verifyAddLiquidityState(simpleDex, owner.address, {
+      expectedReserveA: largeAmountA,
+      expectedReserveB: largeAmountB,
+      expectedTotalLp: expectedLpTokens,
+      expectedLpBalance: expectedLpTokens,
+    });
   });
 
   it("Should revert when adding liquidity with invalid amounts", async function () {
