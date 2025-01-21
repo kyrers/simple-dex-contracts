@@ -1,13 +1,13 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { deploySimpleDexFixture } from "./utils/fixtures";
-import { INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B } from "./utils/constants";
+import { deploySimpleDexFixture } from "../utils/fixtures";
+import { INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B } from "../utils/constants";
 import {
   addInitialLiquidity,
   sqrt,
   verifyAddLiquidityState,
-} from "./utils/helpers";
+} from "../utils/helpers";
 
 describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
   it("Should add initial liquidity correctly", async function () {

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { ethers } from "hardhat";
-import { deploySimpleDexFixture } from "./utils/fixtures";
+import { deploySimpleDexFixture } from "../utils/fixtures";
 
 describe("# TOKEN DEPLOYMENT #", function () {
   it("Should deploy TokenA and TokenB with the correct owner", async function () {

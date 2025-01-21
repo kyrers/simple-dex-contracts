@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { ethers } from "hardhat";
-import { deploySimpleDexFixture } from "./utils/fixtures";
+import { deploySimpleDexFixture } from "../utils/fixtures";
 
 describe("# SIMPLE DEX DEPLOYMENT #", function () {
   it("Should deploy the SimpleDex with the right token addresses", async function () {

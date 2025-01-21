@@ -1,12 +1,12 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { deploySimpleDexFixture } from "./utils/fixtures";
-import { INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B } from "./utils/constants";
+import { deploySimpleDexFixture } from "../utils/fixtures";
+import { INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B } from "../utils/constants";
 import {
   addInitialLiquidity,
   verifyRemoveLiquidityState,
-} from "./utils/helpers";
+} from "../utils/helpers";
 
 describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
   it("Should allow user to remove all the liquidity he provided", async function () {

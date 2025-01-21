@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { deploySimpleDexFixture } from "./utils/fixtures";
-import { INITIAL_MINT_AMOUNT } from "./utils/constants";
+import { deploySimpleDexFixture } from "../utils/fixtures";
+import { INITIAL_MINT_AMOUNT } from "../utils/constants";
 
 describe("# MINTING TOKENS #", function () {
   it("Should mint 1000 of each token to the two accounts", async function () {
