@@ -28,6 +28,8 @@ contract SimpleDex is ReentrancyGuard {
 
     error InsufficientLiquidity();
     error InsufficientLpTokens();
+    error InvalidSwapAmount(uint256 amount);
+    error InvalidToken(address token);
     error InvalidTokenAddress(address tokenA, address tokenB);
     error InvalidTokenAmount(uint256 amountA, uint256 amountB);
     error InvalidTokenRatio(uint256 amountB, uint256 expectedAmountB);
@@ -114,62 +116,52 @@ contract SimpleDex is ReentrancyGuard {
         }
     }
 
-    // function swap(address tokenIn, uint256 amountIn) external {
-    //     require(amountIn > 0, "Invalid amount");
+    function swap(address tokenIn, uint256 amountIn) external nonReentrant {
+        if (amountIn <= 0) {
+            revert InvalidSwapAmount(amountIn);
+        }
 
-    //     if (tokenIn == address(tokenA)) {
-    //         uint256 amountOut = getAmountOut(amountIn, reserveA, reserveB);
-    //         require(
-    //             amountOut > 0 && amountOut <= reserveB,
-    //             "Insufficient liquidity"
-    //         );
+        if (address(tokenA) != tokenIn && address(tokenB) != tokenIn) {
+            revert InvalidToken(tokenIn);
+        }
 
-    //         tokenA.transferFrom(msg.sender, address(this), amountIn);
-    //         tokenB.transfer(msg.sender, amountOut);
+        (
+            bool isTokenA,
+            IERC20 inToken,
+            IERC20 outToken,
+            uint256 reserveIn,
+            uint256 reserveOut
+        ) = tokenIn == address(tokenA)
+                ? (true, tokenA, tokenB, reserveA, reserveB)
+                : (false, tokenB, tokenA, reserveB, reserveA);
 
-    //         reserveA += amountIn;
-    //         reserveB -= amountOut;
+        uint256 amountOut = getAmountOut(amountIn, reserveIn, reserveOut);
+        if (amountOut <= 0 || amountOut > reserveOut) {
+            revert InsufficientLiquidity();
+        }
 
-    //         emit Swap(
-    //             msg.sender,
-    //             tokenIn,
-    //             amountIn,
-    //             address(tokenB),
-    //             amountOut
-    //         );
-    //     } else if (tokenIn == address(tokenB)) {
-    //         uint256 amountOut = getAmountOut(amountIn, reserveB, reserveA);
-    //         require(
-    //             amountOut > 0 && amountOut <= reserveA,
-    //             "Insufficient liquidity"
-    //         );
+        if (isTokenA) {
+            reserveA += amountIn;
+            reserveB -= amountOut;
+        } else {
+            reserveB += amountIn;
+            reserveA -= amountOut;
+        }
 
-    //         tokenB.transferFrom(msg.sender, address(this), amountIn);
-    //         tokenA.transfer(msg.sender, amountOut);
+        inToken.transferFrom(msg.sender, address(this), amountIn);
+        outToken.transfer(msg.sender, amountOut);
 
-    //         reserveB += amountIn;
-    //         reserveA -= amountOut;
+        emit Swap(msg.sender, tokenIn, amountIn, address(outToken), amountOut);
+    }
 
-    //         emit Swap(
-    //             msg.sender,
-    //             tokenIn,
-    //             amountIn,
-    //             address(tokenA),
-    //             amountOut
-    //         );
-    //     } else {
-    //         revert("Invalid token");
-    //     }
-    // }
-
-    // function getAmountOut(
-    //     uint256 amountIn,
-    //     uint256 reserveIn,
-    //     uint256 reserveOut
-    // ) public pure returns (uint256) {
-    //     uint256 amountInWithFee = amountIn * 997;
-    //     uint256 numerator = amountInWithFee * reserveOut;
-    //     uint256 denominator = (reserveIn * 1000) + amountInWithFee;
-    //     return numerator / denominator;
-    // }
+    function getAmountOut(
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) public pure returns (uint256) {
+        uint256 amountInWithFee = amountIn * 997;
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = (reserveIn * 1000) + amountInWithFee;
+        return numerator / denominator;
+    }
 }
