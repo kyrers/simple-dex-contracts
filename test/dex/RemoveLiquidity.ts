@@ -3,10 +3,7 @@ import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { deploySimpleDexFixture } from "../utils/fixtures";
 import { INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B } from "../utils/constants";
-import {
-  addInitialLiquidity,
-  verifyRemoveLiquidityState,
-} from "../utils/helpers";
+import { addLiquidity, verifyRemoveLiquidityState } from "../utils/helpers";
 
 describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
   it("Should allow user to remove all the liquidity he provided", async function () {
@@ -14,7 +11,7 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
       deploySimpleDexFixture
     );
 
-    await addInitialLiquidity(
+    await addLiquidity(
       simpleDex,
       tokenA,
       tokenB,
@@ -49,7 +46,7 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
       deploySimpleDexFixture
     );
 
-    await addInitialLiquidity(
+    await addLiquidity(
       simpleDex,
       tokenA,
       tokenB,
@@ -93,7 +90,7 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
       deploySimpleDexFixture
     );
 
-    await addInitialLiquidity(
+    await addLiquidity(
       simpleDex,
       tokenA,
       tokenB,
@@ -142,13 +139,7 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
     tokenA.mint(owner.address, largeAmountA);
     tokenB.mint(owner.address, largeAmountB);
 
-    await addInitialLiquidity(
-      simpleDex,
-      tokenA,
-      tokenB,
-      largeAmountA,
-      largeAmountB
-    );
+    await addLiquidity(simpleDex, tokenA, tokenB, largeAmountA, largeAmountB);
 
     const lpBalance = await simpleDex.lpBalances(owner.address);
 
@@ -174,7 +165,7 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
     const { simpleDex, tokenA, tokenB, owner, otherAccount } =
       await loadFixture(deploySimpleDexFixture);
 
-    await addInitialLiquidity(
+    await addLiquidity(
       simpleDex,
       tokenA,
       tokenB,
@@ -235,8 +226,7 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
     const { simpleDex, tokenA, tokenB, owner, otherAccount } =
       await loadFixture(deploySimpleDexFixture);
 
-    // Add liquidity as owner
-    await addInitialLiquidity(
+    await addLiquidity(
       simpleDex,
       tokenA,
       tokenB,
@@ -244,10 +234,8 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
       INITIAL_LIQUIDITY_B
     );
 
-    // Get owner's LP balance
     const ownerLpBalance = await simpleDex.lpBalances(owner.address);
 
-    // Try to burn more than owned by using a different account
     await expect(
       simpleDex.connect(otherAccount).removeLiquidity(ownerLpBalance)
     ).to.be.revertedWithCustomError(simpleDex, "InsufficientLpTokens");

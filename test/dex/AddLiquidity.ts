@@ -3,11 +3,7 @@ import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { deploySimpleDexFixture } from "../utils/fixtures";
 import { INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B } from "../utils/constants";
-import {
-  addInitialLiquidity,
-  sqrt,
-  verifyAddLiquidityState,
-} from "../utils/helpers";
+import { addLiquidity, sqrt, verifyAddLiquidityState } from "../utils/helpers";
 
 describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
   it("Should add initial liquidity correctly", async function () {
@@ -15,7 +11,7 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
       deploySimpleDexFixture
     );
 
-    const tx = await addInitialLiquidity(
+    const tx = await addLiquidity(
       simpleDex,
       tokenA,
       tokenB,
@@ -44,7 +40,7 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
       await loadFixture(deploySimpleDexFixture);
 
     //Add initial liquidity with owner
-    await addInitialLiquidity(
+    await addLiquidity(
       simpleDex,
       tokenA,
       tokenB,
@@ -57,7 +53,7 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
     const additionalAmountB = ethers.parseEther("100");
 
     //Add subsequent liquidity with otherAccount
-    const tx = await addInitialLiquidity(
+    const tx = await addLiquidity(
       simpleDex.connect(otherAccount),
       tokenA.connect(otherAccount),
       tokenB.connect(otherAccount),
@@ -90,7 +86,7 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
     const smallAmountA = ethers.parseEther("0.0001");
     const smallAmountB = ethers.parseEther("0.0002");
 
-    const tx = await addInitialLiquidity(
+    const tx = await addLiquidity(
       simpleDex,
       tokenA,
       tokenB,
@@ -124,7 +120,7 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
     tokenA.mint(owner.address, largeAmountA);
     tokenB.mint(owner.address, largeAmountB);
 
-    const tx = await addInitialLiquidity(
+    const tx = await addLiquidity(
       simpleDex,
       tokenA,
       tokenB,

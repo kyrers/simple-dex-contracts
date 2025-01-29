@@ -11,7 +11,7 @@ export function sqrt(value: bigint): bigint {
   return x;
 }
 
-export async function addInitialLiquidity(
+export async function addLiquidity(
   simpleDex: SimpleDex,
   tokenA: TokenA,
   tokenB: TokenB,
@@ -24,20 +24,21 @@ export async function addInitialLiquidity(
   return tx;
 }
 
-interface BaseLiquidityStateParams {
+interface StateVerificationParams {
   simpleDex: SimpleDex;
+  tokenA?: TokenA;
+  tokenB?: TokenB;
   accountAddress: string;
-  expectedLpBalance: bigint;
+  expectedLpBalance?: bigint;
   expectedReserveA: bigint;
   expectedReserveB: bigint;
-  expectedTotalLp: bigint;
+  expectedTotalLp?: bigint;
   expectedTokenABalance?: bigint;
   expectedTokenBBalance?: bigint;
+  initialRatio?: bigint;
 }
 
-export async function verifyAddLiquidityState(
-  params: BaseLiquidityStateParams
-) {
+export async function verifyAddLiquidityState(params: StateVerificationParams) {
   const {
     simpleDex,
     accountAddress,
@@ -55,13 +56,8 @@ export async function verifyAddLiquidityState(
   );
 }
 
-interface RemoveLiquidityStateParams extends BaseLiquidityStateParams {
-  tokenA: TokenA;
-  tokenB: TokenB;
-}
-
 export async function verifyRemoveLiquidityState(
-  params: RemoveLiquidityStateParams
+  params: StateVerificationParams
 ) {
   const {
     simpleDex,
@@ -82,10 +78,38 @@ export async function verifyRemoveLiquidityState(
   expect(await simpleDex.reserveA()).to.equal(expectedReserveA);
   expect(await simpleDex.reserveB()).to.equal(expectedReserveB);
   expect(await simpleDex.totalLpTokens()).to.equal(expectedTotalLp);
-  expect(await tokenA.balanceOf(accountAddress)).to.equal(
+  expect(await tokenA?.balanceOf(accountAddress)).to.equal(
     expectedTokenABalance
   );
-  expect(await tokenB.balanceOf(accountAddress)).to.equal(
+  expect(await tokenB?.balanceOf(accountAddress)).to.equal(
     expectedTokenBBalance
   );
+}
+
+export async function verifySwapState(params: StateVerificationParams) {
+  const {
+    simpleDex,
+    tokenA,
+    tokenB,
+    accountAddress,
+    expectedReserveA,
+    expectedReserveB,
+    expectedTokenABalance,
+    expectedTokenBBalance,
+    initialRatio,
+  } = params;
+
+  expect(await simpleDex.reserveA()).to.equal(expectedReserveA);
+  expect(await simpleDex.reserveB()).to.equal(expectedReserveB);
+  expect(await tokenA?.balanceOf(accountAddress)).to.equal(
+    expectedTokenABalance
+  );
+  expect(await tokenB?.balanceOf(accountAddress)).to.equal(
+    expectedTokenBBalance
+  );
+
+  // Verify constant ratio (with 0.5% tolerance)
+  const product = expectedReserveA * expectedReserveB;
+  const tolerance = (initialRatio! * 5n) / 1000n;
+  expect(product).to.be.closeTo(initialRatio, tolerance);
 }
