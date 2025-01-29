@@ -30,7 +30,11 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
       .to.emit(simpleDex, "RemoveLiquidity")
       .withArgs(owner.address, INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B);
 
-    await verifyRemoveLiquidityState(simpleDex, tokenA, tokenB, owner.address, {
+    await verifyRemoveLiquidityState({
+      simpleDex,
+      tokenA,
+      tokenB,
+      accountAddress: owner.address,
       expectedLpBalance: 0n,
       expectedReserveA: 0n,
       expectedReserveB: 0n,
@@ -70,7 +74,11 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
       .to.emit(simpleDex, "RemoveLiquidity")
       .withArgs(owner.address, expectedAmountA, expectedAmountB);
 
-    await verifyRemoveLiquidityState(simpleDex, tokenA, tokenB, owner.address, {
+    await verifyRemoveLiquidityState({
+      simpleDex,
+      tokenA,
+      tokenB,
+      accountAddress: owner.address,
       expectedLpBalance: initialLpBalance - lpTokensToBurn,
       expectedReserveA: INITIAL_LIQUIDITY_A - expectedAmountA,
       expectedReserveB: INITIAL_LIQUIDITY_B - expectedAmountB,
@@ -108,7 +116,11 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
       .to.emit(simpleDex, "RemoveLiquidity")
       .withArgs(owner.address, expectedAmountA, expectedAmountB);
 
-    await verifyRemoveLiquidityState(simpleDex, tokenA, tokenB, owner.address, {
+    await verifyRemoveLiquidityState({
+      simpleDex,
+      tokenA,
+      tokenB,
+      accountAddress: owner.address,
       expectedLpBalance: initialLpBalance - lpTokensToBurn,
       expectedReserveA: INITIAL_LIQUIDITY_A - expectedAmountA,
       expectedReserveB: INITIAL_LIQUIDITY_B - expectedAmountB,
@@ -144,7 +156,11 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
       .to.emit(simpleDex, "RemoveLiquidity")
       .withArgs(owner.address, largeAmountA, largeAmountB);
 
-    await verifyRemoveLiquidityState(simpleDex, tokenA, tokenB, owner.address, {
+    await verifyRemoveLiquidityState({
+      simpleDex,
+      tokenA,
+      tokenB,
+      accountAddress: owner.address,
       expectedLpBalance: 0n,
       expectedReserveA: 0n,
       expectedReserveB: 0n,
@@ -192,7 +208,11 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
         INITIAL_LIQUIDITY_B - amountOut
       );
 
-    await verifyRemoveLiquidityState(simpleDex, tokenA, tokenB, owner.address, {
+    await verifyRemoveLiquidityState({
+      simpleDex,
+      tokenA,
+      tokenB,
+      accountAddress: owner.address,
       expectedLpBalance: 0n,
       expectedReserveA: 0n,
       expectedReserveB: 0n,

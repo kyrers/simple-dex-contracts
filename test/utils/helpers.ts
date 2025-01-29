@@ -24,7 +24,9 @@ export async function addInitialLiquidity(
   return tx;
 }
 
-interface LiquidityStateParams {
+interface BaseLiquidityStateParams {
+  simpleDex: SimpleDex;
+  accountAddress: string;
   expectedLpBalance: bigint;
   expectedReserveA: bigint;
   expectedReserveB: bigint;
@@ -34,11 +36,11 @@ interface LiquidityStateParams {
 }
 
 export async function verifyAddLiquidityState(
-  simpleDex: SimpleDex,
-  accountAddress: string,
-  params: LiquidityStateParams
+  params: BaseLiquidityStateParams
 ) {
   const {
+    simpleDex,
+    accountAddress,
     expectedLpBalance,
     expectedReserveA,
     expectedReserveB,
@@ -53,14 +55,19 @@ export async function verifyAddLiquidityState(
   );
 }
 
+interface RemoveLiquidityStateParams extends BaseLiquidityStateParams {
+  tokenA: TokenA;
+  tokenB: TokenB;
+}
+
 export async function verifyRemoveLiquidityState(
-  simpleDex: SimpleDex,
-  tokenA: TokenA,
-  tokenB: TokenB,
-  accountAddress: string,
-  params: LiquidityStateParams
+  params: RemoveLiquidityStateParams
 ) {
   const {
+    simpleDex,
+    accountAddress,
+    tokenA,
+    tokenB,
     expectedLpBalance,
     expectedReserveA,
     expectedReserveB,

@@ -29,7 +29,9 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
 
     const expectedLpTokens = sqrt(INITIAL_LIQUIDITY_A * INITIAL_LIQUIDITY_B);
 
-    await verifyAddLiquidityState(simpleDex, owner.address, {
+    await verifyAddLiquidityState({
+      simpleDex,
+      accountAddress: owner.address,
       expectedLpBalance: expectedLpTokens,
       expectedReserveA: INITIAL_LIQUIDITY_A,
       expectedReserveB: INITIAL_LIQUIDITY_B,
@@ -70,7 +72,9 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
       .to.emit(simpleDex, "AddLiquidity")
       .withArgs(otherAccount.address, additionalAmountA, additionalAmountB);
 
-    await verifyAddLiquidityState(simpleDex, otherAccount.address, {
+    await verifyAddLiquidityState({
+      simpleDex,
+      accountAddress: otherAccount.address,
       expectedReserveA: INITIAL_LIQUIDITY_A + additionalAmountA,
       expectedReserveB: INITIAL_LIQUIDITY_B + additionalAmountB,
       expectedTotalLp: firstTxLpTokens + secondTxLpTokens,
@@ -100,7 +104,9 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
 
     const expectedLpTokens = sqrt(smallAmountA * smallAmountB);
 
-    await verifyAddLiquidityState(simpleDex, owner.address, {
+    await verifyAddLiquidityState({
+      simpleDex,
+      accountAddress: owner.address,
       expectedReserveA: smallAmountA,
       expectedReserveB: smallAmountB,
       expectedTotalLp: expectedLpTokens,
@@ -132,7 +138,9 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
 
     const expectedLpTokens = sqrt(largeAmountA * largeAmountB);
 
-    await verifyAddLiquidityState(simpleDex, owner.address, {
+    await verifyAddLiquidityState({
+      simpleDex,
+      accountAddress: owner.address,
       expectedReserveA: largeAmountA,
       expectedReserveB: largeAmountB,
       expectedTotalLp: expectedLpTokens,
