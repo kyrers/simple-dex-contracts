@@ -136,8 +136,8 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
     const tokenBBalance = await tokenB.balanceOf(owner.address);
     const largeAmountA = ethers.parseEther("1000000");
     const largeAmountB = ethers.parseEther("2000000");
-    tokenA.mint(owner.address, largeAmountA);
-    tokenB.mint(owner.address, largeAmountB);
+    tokenA.mint(largeAmountA);
+    tokenB.mint(largeAmountB);
 
     await addLiquidity(simpleDex, tokenA, tokenB, largeAmountA, largeAmountB);
 
@@ -175,7 +175,7 @@ describe("# SIMPLE DEX REMOVE LIQUIDITY #", function () {
 
     // Do swap with otherAccount
     const swapAmount = ethers.parseEther("10");
-    await tokenA.mint(otherAccount.address, swapAmount);
+    await tokenA.connect(otherAccount).mint(swapAmount);
     await tokenA.connect(otherAccount).approve(simpleDex.target, swapAmount);
 
     // Calculate how much he'll get from the swap

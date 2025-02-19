@@ -154,14 +154,14 @@ describe("# SIMPLE DEX SWAP #", function () {
 
     const largeAmountA = ethers.parseEther("1000000");
     const largeAmountB = ethers.parseEther("2000000");
-    tokenA.mint(owner.address, largeAmountA);
-    tokenB.mint(owner.address, largeAmountB);
+    tokenA.mint(largeAmountA);
+    tokenB.mint(largeAmountB);
 
     await addLiquidity(simpleDex, tokenA, tokenB, largeAmountA, largeAmountB);
 
     const swapAmount = ethers.parseEther("100000");
     //Mint more A tokens to the user and swap them
-    tokenA.mint(owner.address, swapAmount);
+    tokenA.mint(swapAmount);
     await tokenA.approve(simpleDex.target, swapAmount);
 
     const expectedAmountOut = await simpleDex.getAmountOut(
@@ -302,7 +302,7 @@ describe("# SIMPLE DEX SWAP #", function () {
     );
 
     const swapAmount = ethers.parseEther("1000");
-    await tokenA.mint(owner.address, swapAmount);
+    await tokenA.mint(swapAmount);
     await tokenA.approve(simpleDex.target, swapAmount);
 
     const expectedAmountOut = await simpleDex.getAmountOut(

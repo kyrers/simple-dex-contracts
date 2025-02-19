@@ -117,8 +117,8 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
 
     const largeAmountA = ethers.parseEther("1000000");
     const largeAmountB = ethers.parseEther("2000000");
-    tokenA.mint(owner.address, largeAmountA);
-    tokenB.mint(owner.address, largeAmountB);
+    tokenA.mint(largeAmountA);
+    tokenB.mint(largeAmountB);
 
     const tx = await addLiquidity(
       simpleDex,

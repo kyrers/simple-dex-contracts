@@ -1,26 +1,30 @@
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { ethers } from "hardhat";
 import { deploySimpleDexFixture } from "../utils/fixtures";
+import { INITIAL_MINT_AMOUNT } from "../utils/constants";
 
 describe("# TOKEN DEPLOYMENT #", function () {
-  it("Should deploy TokenA and TokenB with the correct owner", async function () {
-    const { tokenA, tokenB, owner } = await loadFixture(deploySimpleDexFixture);
+  it("Should deploy TokenA and TokenB successfully", async function () {
+    const { tokenA, tokenB } = await loadFixture(deploySimpleDexFixture);
 
-    expect(await tokenA.owner()).to.equal(owner.address);
-    expect(await tokenB.owner()).to.equal(owner.address);
+    expect(await tokenA.name()).to.equal("TokenA");
+    expect(await tokenA.symbol()).to.equal("TKA");
+    expect(await tokenB.name()).to.equal("TokenB");
+    expect(await tokenB.symbol()).to.equal("TKB");
   });
 
-  it("Should fail to deploy tokens because address 0 is not a valid owner", async function () {
-    const tokenAFactory = await ethers.getContractFactory("TokenA");
-    const tokenBFactory = await ethers.getContractFactory("TokenB");
+  it("Should mint 1000 of each token to the two accounts", async function () {
+    const { tokenA, tokenB, owner, otherAccount } = await loadFixture(
+      deploySimpleDexFixture
+    );
 
-    await expect(
-      tokenAFactory.deploy(ethers.ZeroAddress)
-    ).to.be.revertedWithCustomError(tokenAFactory, "OwnableInvalidOwner");
-
-    await expect(
-      tokenBFactory.deploy(ethers.ZeroAddress)
-    ).to.be.revertedWithCustomError(tokenBFactory, "OwnableInvalidOwner");
+    expect(await tokenA.balanceOf(owner.address)).to.equal(INITIAL_MINT_AMOUNT);
+    expect(await tokenA.balanceOf(otherAccount.address)).to.equal(
+      INITIAL_MINT_AMOUNT
+    );
+    expect(await tokenB.balanceOf(owner.address)).to.equal(INITIAL_MINT_AMOUNT);
+    expect(await tokenB.balanceOf(otherAccount.address)).to.equal(
+      INITIAL_MINT_AMOUNT
+    );
   });
 });

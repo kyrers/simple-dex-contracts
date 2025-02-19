@@ -7,18 +7,10 @@ async function main() {
   const [owner] = await ethers.getSigners();
   console.log("OWNER:", owner.address);
 
-  const { tokenA } = await hre.ignition.deploy(TokenAModule, {
-    parameters: {
-      TokenAModule: { initialOwner: owner.address },
-    },
-  });
+  const { tokenA } = await hre.ignition.deploy(TokenAModule);
   console.log("Token A deployed to:", tokenA.target.toString());
 
-  const { tokenB } = await hre.ignition.deploy(TokenBModule, {
-    parameters: {
-      TokenBModule: { initialOwner: owner.address },
-    },
-  });
+  const { tokenB } = await hre.ignition.deploy(TokenBModule);
   console.log("Token B deployed to:", tokenB.target.toString());
 
   const { simpleDex } = await hre.ignition.deploy(SimpleDexModule, {

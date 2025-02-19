@@ -6,19 +6,19 @@ export async function deploySimpleDexFixture() {
 
   //Deploy contracts
   const TokenA = await ethers.getContractFactory("TokenA");
-  const tokenA = await TokenA.deploy(owner.address);
+  const tokenA = await TokenA.deploy();
 
   const TokenB = await ethers.getContractFactory("TokenB");
-  const tokenB = await TokenB.deploy(owner.address);
+  const tokenB = await TokenB.deploy();
 
   const SimpleDex = await ethers.getContractFactory("SimpleDex");
   const simpleDex = await SimpleDex.deploy(tokenA.target, tokenB.target);
 
   //Mint tokens to users
-  await tokenA.mint(owner.address, INITIAL_MINT_AMOUNT);
-  await tokenA.mint(otherAccount.address, INITIAL_MINT_AMOUNT);
-  await tokenB.mint(owner.address, INITIAL_MINT_AMOUNT);
-  await tokenB.mint(otherAccount.address, INITIAL_MINT_AMOUNT);
+  await tokenA.mint(INITIAL_MINT_AMOUNT);
+  await tokenA.connect(otherAccount).mint(INITIAL_MINT_AMOUNT);
+  await tokenB.mint(INITIAL_MINT_AMOUNT);
+  await tokenB.connect(otherAccount).mint(INITIAL_MINT_AMOUNT);
 
   return {
     tokenA,
