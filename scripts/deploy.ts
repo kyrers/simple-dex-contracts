@@ -1,12 +1,9 @@
-import hre, { ethers } from "hardhat";
+import hre from "hardhat";
 import TokenAModule from "../ignition/modules/TokenAModule";
 import TokenBModule from "../ignition/modules/TokenBModule";
 import SimpleDexModule from "../ignition/modules/SimpleDexModule";
 
 async function main() {
-  const [owner] = await ethers.getSigners();
-  console.log("OWNER:", owner.address);
-
   const { tokenA } = await hre.ignition.deploy(TokenAModule);
   console.log("Token A deployed to:", tokenA.target.toString());
 
