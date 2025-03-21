@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
@@ -59,34 +60,96 @@ contract SimpleDex is ReentrancyGuard {
         uint256 amountA,
         uint256 amountB
     ) external nonReentrant {
-        if (amountA <= 0 || amountB <= 0) {
-            revert InvalidTokenAmount(amountA, amountB);
-        }
+        _addLiquidity(amountA, amountB);
+    }
 
-        uint256 lpTokensMinted;
+    /**
+     * @notice Add liquidity to the swap using ERC20Permit.
+     * @dev Same as addLiquidity but uses permit to approve in the same transaction
+     * @param amountA The amount of A tokens to add
+     * @param amountB The amount of B tokens to add
+     * @param deadlineA The deadline for tokenA permit
+     * @param vA The v parameter for tokenA permit
+     * @param rA The r parameter for tokenA permit
+     * @param sA The s parameter for tokenA permit
+     * @param deadlineB The deadline for tokenB permit
+     * @param vB The v parameter for tokenB permit
+     * @param rB The r parameter for tokenB permit
+     * @param sB The s parameter for tokenB permit
+     */
+    function addLiquidityWithPermit(
+        uint256 amountA,
+        uint256 amountB,
+        uint256 deadlineA,
+        uint8 vA,
+        bytes32 rA,
+        bytes32 sA,
+        uint256 deadlineB,
+        uint8 vB,
+        bytes32 rB,
+        bytes32 sB
+    ) external nonReentrant {
+        IERC20Permit(address(tokenA)).permit(
+            msg.sender,
+            address(this),
+            amountA,
+            deadlineA,
+            vA,
+            rA,
+            sA
+        );
 
-        if (totalLpTokens == 0) {
-            // Initial liquidity
-            lpTokensMinted = sqrt(amountA * amountB);
-        } else {
-            //Validate ratio
-            uint256 expectedAmountB = (amountA * reserveB) / reserveA;
-            if (amountB != expectedAmountB) {
-                revert InvalidTokenRatio(amountB, expectedAmountB);
-            }
+        IERC20Permit(address(tokenB)).permit(
+            msg.sender,
+            address(this),
+            amountB,
+            deadlineB,
+            vB,
+            rB,
+            sB
+        );
 
-            lpTokensMinted = (amountA * totalLpTokens) / reserveA;
-        }
+        _addLiquidity(amountA, amountB);
+    }
 
-        reserveA += amountA;
-        reserveB += amountB;
-        totalLpTokens += lpTokensMinted;
-        lpBalances[msg.sender] += lpTokensMinted;
+    /**
+     * @notice Swap between Token A and B. Constant 0.3% fee.
+     * @param tokenIn The token to swap
+     * @param amountIn The amount to swap
+     */
+    function swap(address tokenIn, uint256 amountIn) external nonReentrant {
+        _swap(tokenIn, amountIn);
+    }
 
-        tokenA.transferFrom(msg.sender, address(this), amountA);
-        tokenB.transferFrom(msg.sender, address(this), amountB);
+    /**
+     * @notice Swap between Token A and B using ERC20Permit.
+     * @dev Same as swap but uses permit to approve in the same transaction
+     * @param tokenIn The token to swap
+     * @param amountIn The amount to swap
+     * @param deadline The deadline for the permit
+     * @param v The v parameter for the permit
+     * @param r The r parameter for the permit
+     * @param s The s parameter for the permit
+     */
+    function swapWithPermit(
+        address tokenIn,
+        uint256 amountIn,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external nonReentrant {
+        IERC20Permit(tokenIn).permit(
+            msg.sender,
+            address(this),
+            amountIn,
+            deadline,
+            v,
+            r,
+            s
+        );
 
-        emit AddLiquidity(msg.sender, amountA, amountB);
+        _swap(tokenIn, amountIn);
     }
 
     /**
@@ -117,11 +180,52 @@ contract SimpleDex is ReentrancyGuard {
     }
 
     /**
-     * @notice Swap between Token A and B. Constant 0.3% fee.
-     * @param tokenIn The token to swap
-     * @param amountIn The amount to swap
+     * @notice Calculates the amount of tokens to send to an user during a swap in order to keep the constant ratio.
+     * @param amountIn The amount of Token A or B sent
+     * @param reserveIn The reserves of the token sent
+     * @param reserveOut The reserves of the token to send
+     * @return Tokens to send to the user
      */
-    function swap(address tokenIn, uint256 amountIn) external nonReentrant {
+    function getAmountOut(
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) public pure returns (uint256) {
+        uint256 amountInWithFee = amountIn * 997;
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = (reserveIn * 1000) + amountInWithFee;
+        return numerator / denominator;
+    }
+
+    function _addLiquidity(uint256 amountA, uint256 amountB) internal {
+        if (amountA <= 0 || amountB <= 0) {
+            revert InvalidTokenAmount(amountA, amountB);
+        }
+
+        uint256 lpTokensMinted;
+
+        if (totalLpTokens == 0) {
+            lpTokensMinted = sqrt(amountA * amountB);
+        } else {
+            uint256 expectedAmountB = (amountA * reserveB) / reserveA;
+            if (amountB != expectedAmountB) {
+                revert InvalidTokenRatio(amountB, expectedAmountB);
+            }
+            lpTokensMinted = (amountA * totalLpTokens) / reserveA;
+        }
+
+        reserveA += amountA;
+        reserveB += amountB;
+        totalLpTokens += lpTokensMinted;
+        lpBalances[msg.sender] += lpTokensMinted;
+
+        tokenA.transferFrom(msg.sender, address(this), amountA);
+        tokenB.transferFrom(msg.sender, address(this), amountB);
+
+        emit AddLiquidity(msg.sender, amountA, amountB);
+    }
+
+    function _swap(address tokenIn, uint256 amountIn) internal {
         if (amountIn <= 0) {
             revert InvalidSwapAmount(amountIn);
         }
@@ -157,24 +261,6 @@ contract SimpleDex is ReentrancyGuard {
         outToken.transfer(msg.sender, amountOut);
 
         emit Swap(msg.sender, tokenIn, amountIn, address(outToken), amountOut);
-    }
-
-    /**
-     * @notice Calculates the amount of tokens to send to an user during a swap in order to keep the constant ratio.
-     * @param amountIn The amount of Token A or B sent
-     * @param reserveIn The reserves of the token sent
-     * @param reserveOut The reserves of the token to send
-     * @return Tokens to send to the user
-     */
-    function getAmountOut(
-        uint256 amountIn,
-        uint256 reserveIn,
-        uint256 reserveOut
-    ) public pure returns (uint256) {
-        uint256 amountInWithFee = amountIn * 997;
-        uint256 numerator = amountInWithFee * reserveOut;
-        uint256 denominator = (reserveIn * 1000) + amountInWithFee;
-        return numerator / denominator;
     }
 
     /**
