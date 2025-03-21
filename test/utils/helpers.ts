@@ -1,5 +1,8 @@
 import { SimpleDex, TokenA, TokenB } from "../../typechain-types";
 import { expect } from "chai";
+import { ERC20Permit } from "../../typechain-types";
+import { Signer } from "ethers";
+import { ethers } from "ethers";
 
 export function sqrt(value: bigint): bigint {
   let x = value;
@@ -9,6 +12,83 @@ export function sqrt(value: bigint): bigint {
     y = (value / y + y) / 2n;
   }
   return x;
+}
+
+export async function getPermitSignature(
+  token: ERC20Permit,
+  owner: Signer,
+  spender: string,
+  value: bigint,
+  deadline: bigint
+): Promise<string> {
+  const domain = {
+    name: await token.name(),
+    version: "1",
+    chainId: 31337,
+    verifyingContract: await token.getAddress(),
+  };
+
+  const types = {
+    Permit: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "nonce", type: "uint256" },
+      { name: "deadline", type: "uint256" },
+    ],
+  };
+
+  const message = {
+    owner: await owner.getAddress(),
+    spender,
+    value,
+    nonce: await token.nonces(await owner.getAddress()),
+    deadline,
+  };
+
+  return owner.signTypedData(domain, types, message);
+}
+
+export async function addLiquidityWithPermit(
+  simpleDex: SimpleDex,
+  tokenA: TokenA,
+  tokenB: TokenB,
+  amountA: bigint,
+  amountB: bigint,
+  owner: Signer,
+  deadline: bigint
+) {
+  const signatureA = await getPermitSignature(
+    tokenA,
+    owner,
+    await simpleDex.getAddress(),
+    amountA,
+    deadline
+  );
+  const { v: vA, r: rA, s: sA } = ethers.Signature.from(signatureA);
+
+  const signatureB = await getPermitSignature(
+    tokenB,
+    owner,
+    await simpleDex.getAddress(),
+    amountB,
+    deadline
+  );
+  const { v: vB, r: rB, s: sB } = ethers.Signature.from(signatureB);
+  const tx = await simpleDex.addLiquidityWithPermit(
+    amountA,
+    amountB,
+    deadline,
+    vA,
+    rA,
+    sA,
+    deadline,
+    vB,
+    rB,
+    sB
+  );
+
+  return tx;
 }
 
 export async function addLiquidity(
