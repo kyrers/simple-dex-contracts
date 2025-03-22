@@ -4,6 +4,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { deploySimpleDexFixture } from "../utils/fixtures";
 import { INITIAL_LIQUIDITY_A, INITIAL_LIQUIDITY_B } from "../utils/constants";
 import { addLiquidity, verifySwapState } from "../utils/helpers";
+import { getPermitSignature } from "../utils/helpers";
 
 describe("# SIMPLE DEX SWAP #", function () {
   it("Should allow user to Swap Token A for B and maintain the ratio", async function () {
@@ -31,6 +32,64 @@ describe("# SIMPLE DEX SWAP #", function () {
     const tokenBBalanceBefore = await tokenB.balanceOf(owner.address);
 
     await expect(simpleDex.swap(tokenA.target, swapAmount))
+      .to.emit(simpleDex, "Swap")
+      .withArgs(
+        owner.address,
+        tokenA.target,
+        swapAmount,
+        tokenB.target,
+        expectedAmountOut
+      );
+
+    await verifySwapState({
+      simpleDex,
+      tokenA,
+      tokenB,
+      accountAddress: owner.address,
+      expectedReserveA: INITIAL_LIQUIDITY_A + swapAmount,
+      expectedReserveB: INITIAL_LIQUIDITY_B - expectedAmountOut,
+      expectedTokenABalance: tokenABalanceBefore - swapAmount,
+      expectedTokenBBalance: tokenBBalanceBefore + expectedAmountOut,
+      initialRatio: INITIAL_LIQUIDITY_A * INITIAL_LIQUIDITY_B,
+    });
+  });
+
+  it("Should swap tokens using permits instead of approvals", async function () {
+    const { simpleDex, tokenA, tokenB, owner } = await loadFixture(
+      deploySimpleDexFixture
+    );
+
+    await addLiquidity(
+      simpleDex,
+      tokenA,
+      tokenB,
+      INITIAL_LIQUIDITY_A,
+      INITIAL_LIQUIDITY_B
+    );
+
+    const swapAmount = ethers.parseEther("10");
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+    const expectedAmountOut = await simpleDex.getAmountOut(
+      swapAmount,
+      INITIAL_LIQUIDITY_A,
+      INITIAL_LIQUIDITY_B
+    );
+    const tokenABalanceBefore = await tokenA.balanceOf(owner.address);
+    const tokenBBalanceBefore = await tokenB.balanceOf(owner.address);
+
+    const signatureA = await getPermitSignature(
+      tokenA,
+      owner,
+      await simpleDex.getAddress(),
+      swapAmount,
+      deadline
+    );
+    const { v, r, s } = ethers.Signature.from(signatureA);
+
+    await expect(
+      simpleDex.swapWithPermit(tokenA.target, swapAmount, deadline, v, r, s)
+    )
       .to.emit(simpleDex, "Swap")
       .withArgs(
         owner.address,
@@ -391,5 +450,114 @@ describe("# SIMPLE DEX SWAP #", function () {
     await expect(
       simpleDex.swap(tokenB.target, ethers.parseEther("1"))
     ).to.be.revertedWithCustomError(simpleDex, "InsufficientLiquidity");
+  });
+
+  it("Should revert when permit deadline has expired", async function () {
+    const { simpleDex, tokenA, tokenB, owner } = await loadFixture(
+      deploySimpleDexFixture
+    );
+
+    await addLiquidity(
+      simpleDex,
+      tokenA,
+      tokenB,
+      INITIAL_LIQUIDITY_A,
+      INITIAL_LIQUIDITY_B
+    );
+
+    const swapAmount = ethers.parseEther("10");
+    const expiredDeadline = BigInt(Math.floor(Date.now() / 1000) - 3600); // 1 hour ago
+
+    const signatureA = await getPermitSignature(
+      tokenA,
+      owner,
+      await simpleDex.getAddress(),
+      swapAmount,
+      expiredDeadline
+    );
+    const { v, r, s } = ethers.Signature.from(signatureA);
+
+    await expect(
+      simpleDex.swapWithPermit(
+        tokenA.target,
+        swapAmount,
+        expiredDeadline,
+        v,
+        r,
+        s
+      )
+    ).to.be.revertedWithCustomError(tokenA, "ERC2612ExpiredSignature");
+  });
+
+  it("Should revert when permit signature is invalid", async function () {
+    const { simpleDex, tokenA, tokenB, owner, otherAccount } =
+      await loadFixture(deploySimpleDexFixture);
+
+    await addLiquidity(
+      simpleDex,
+      tokenA,
+      tokenB,
+      INITIAL_LIQUIDITY_A,
+      INITIAL_LIQUIDITY_B
+    );
+
+    const swapAmount = ethers.parseEther("10");
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+    //Get signature from otherAccount but try to use it for owner's tokens
+    const signatureA = await getPermitSignature(
+      tokenA,
+      otherAccount,
+      await simpleDex.getAddress(),
+      swapAmount,
+      deadline
+    );
+    const { v, r, s } = ethers.Signature.from(signatureA);
+
+    await expect(
+      simpleDex.swapWithPermit(tokenA.target, swapAmount, deadline, v, r, s)
+    ).to.be.revertedWithCustomError(tokenA, "ERC2612InvalidSigner");
+  });
+
+  it("Should revert when permit is reused", async function () {
+    const { simpleDex, tokenA, tokenB, owner } = await loadFixture(
+      deploySimpleDexFixture
+    );
+
+    await addLiquidity(
+      simpleDex,
+      tokenA,
+      tokenB,
+      INITIAL_LIQUIDITY_A,
+      INITIAL_LIQUIDITY_B
+    );
+
+    const swapAmount = ethers.parseEther("10");
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+    //Generate signature once
+    const signatureA = await getPermitSignature(
+      tokenA,
+      owner,
+      await simpleDex.getAddress(),
+      swapAmount,
+      deadline
+    );
+    const { v, r, s } = ethers.Signature.from(signatureA);
+
+    //First use of permit
+    await simpleDex.swapWithPermit(
+      tokenA.target,
+      swapAmount,
+      deadline,
+      v,
+      r,
+      s
+    );
+
+    //Try to reuse the same permit
+    await expect(
+      simpleDex.swapWithPermit(tokenA.target, swapAmount, deadline, v, r, s)
+    ).to.be.revertedWithCustomError(tokenA, "ERC2612InvalidSigner");
   });
 });
