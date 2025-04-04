@@ -74,8 +74,9 @@ describe("# SIMPLE DEX ADD LIQUIDITY #", function () {
   });
 
   it("Should add subsequent liquidity respecting the ratio", async function () {
-    const { simpleDex, tokenA, tokenB, owner, otherAccount } =
-      await loadFixture(deploySimpleDexFixture);
+    const { simpleDex, tokenA, tokenB, otherAccount } = await loadFixture(
+      deploySimpleDexFixture
+    );
 
     //Add initial liquidity with owner
     await addLiquidity(
