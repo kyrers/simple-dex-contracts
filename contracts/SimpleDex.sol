@@ -208,7 +208,9 @@ contract SimpleDex is ReentrancyGuard {
             lpTokensMinted = sqrt(amountA * amountB);
         } else {
             uint256 expectedAmountB = (amountA * reserveB) / reserveA;
-            if (amountB != expectedAmountB) {
+            //Allow for 0.1% tolerance in the ratio to account for rounding differences
+            uint256 tolerance = expectedAmountB / 1000;
+            if (amountB < expectedAmountB - tolerance || amountB > expectedAmountB + tolerance) {
                 revert InvalidTokenRatio(amountB, expectedAmountB);
             }
             lpTokensMinted = (amountA * totalLpTokens) / reserveA;
